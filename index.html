@@ -1,16 +1,321 @@
+
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MATH 1040 Grade Calculator</title><style>
-:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#172334;background:#f5f7fb}*{box-sizing:border-box}body{margin:0;padding:24px}.wrap{max-width:850px;margin:auto;background:white;border:1px solid #dce3ed;border-radius:18px;padding:28px;box-shadow:0 8px 24px #1b30450a}h1{margin:0 0 8px;font-size:1.7rem}p{line-height:1.5}.intro{color:#506079;margin:0 0 18px}.notice{background:#f1f5fa;border-left:4px solid #2a5685;padding:12px 15px;border-radius:5px;margin:16px 0 22px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px 20px}label{display:block;font-weight:600;margin-bottom:6px}input{width:100%;border:1px solid #aab7c8;border-radius:9px;padding:12px;font-size:1rem}input:focus{outline:3px solid #bdd6f6;border-color:#2c65a3}.results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:24px}.result{background:#f1f5fa;border-radius:12px;padding:15px;text-align:center}.result small{display:block;color:#526179;margin-bottom:8px}.result strong{font-size:1.65rem}.pass{color:#17633d}.np{color:#9b2c2c}.foot{color:#596779;font-size:.88rem;margin-top:18px}button{margin-top:18px;background:white;border:1px solid #8e9db0;border-radius:8px;padding:10px 18px;font-weight:600;cursor:pointer}button:hover{background:#f1f5fa}.error{color:#a02424;min-height:1.5em}@media(max-width:540px){body{padding:10px}.wrap{padding:17px}.results{grid-template-columns:1fr}.grid{gap:12px}h1{font-size:1.35rem}}
-</style></head><body><main class="wrap"><h1>MATH 1040 Grade Calculator</h1><p class="intro">Enter your grades from Canvas to estimate your course results. You can also try different scores to explore possible outcomes.</p><div class="notice"><strong>Important:</strong> Enter your original Test 1, Test 2, and Test 3 scores. <strong>Do not replace the lowest test score yourself.</strong> The calculator automatically applies the final exam replacement rule when beneficial.</div><div class="grid" id="fields"></div><div class="error" id="error" role="alert" aria-live="polite"></div><div class="results" aria-live="polite"><div class="result"><small>Weighted Exam Average or Final Exam Score</small><strong id="exam">—</strong></div><div class="result"><small>Course Average</small><strong id="course">—</strong></div><div class="result"><small>Letter Grade</small><strong id="grade">—</strong></div></div><button id="reset" type="button">Clear all grades</button><p class="foot">This calculator is a guide only, not a guarantee of your final course grade. No scores are submitted or stored. The grade shown here does not change your grades in Canvas.</p></main><script>
-const fields=[['hw','Written HW'],['edf','Edfinity'],['quiz','Quizzes'],['la','Learning Activities'],['t1','Test 1'],['t2','Test 2'],['t3','Test 3'],['final','Final Exam']];
-const holder=document.getElementById('fields');for(const [id,name] of fields){const el=document.createElement('div');const label=document.createElement('label');label.htmlFor=id;label.textContent=name+' (%)';const input=document.createElement('input');input.type='number';input.id=id;input.min='0';input.max='100';input.step='any';input.placeholder='0–100';input.inputMode='decimal';input.addEventListener('input',calculate);el.append(label,input);holder.appendChild(el)}
-const trunc2=x=>Math.trunc((x+Number.EPSILON)*100)/100;
-function calculate(){const v={};let invalid=false;for(const [id] of fields){const raw=document.getElementById(id).value;const n=raw===''?0:Number(raw);if(!Number.isFinite(n)||n<0||n>100){invalid=true}v[id]=n}document.getElementById('error').textContent=invalid?'Please enter a score from 0 to 100 for each field.':'';if(invalid){for(const id of ['exam','course','grade'])document.getElementById(id).textContent='—';return}
-// Exact translation of the three output formulas in the supplied Excel workbook.
-const examSum=v.t1+v.t2+v.t3+v.final-Math.min(v.t1,v.t2,v.t3,v.final);
-const exam=trunc2(Math.max((15*examSum+20*v.final)/65,v.final));
-const course=exam>=65?trunc2((10*Math.min(v.hw,100)+9*v.edf+10*Math.min(v.quiz,100)+6*Math.min(v.la,100)+15*examSum+20*v.final)/100):null;
-const grade=course===null?'NP':course>=70?'P':'NP';
-document.getElementById('exam').textContent=exam.toFixed(2)+'%';document.getElementById('course').textContent=course===null?'NP':course.toFixed(2)+'%';const gradeEl=document.getElementById('grade');gradeEl.textContent=grade;gradeEl.className=grade==='P'?'pass':'np';}
-document.getElementById('reset').addEventListener('click',()=>{for(const [id] of fields)document.getElementById(id).value='';calculate()});calculate();
-</script></body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MATH 1040 Grade Calculator</title>
+
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      color: #172334;
+      background: #f5f7fb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+    }
+
+    .wrap {
+      max-width: 850px;
+      margin: auto;
+      background: white;
+      border: 1px solid #dce3ed;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 8px 24px #1b30450a;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.7rem;
+    }
+
+    p { line-height: 1.5; }
+
+    .intro {
+      color: #506079;
+      margin: 0 0 18px;
+    }
+
+    .notice {
+      background: #f1f5fa;
+      border-left: 4px solid #2a5685;
+      padding: 12px 15px;
+      border-radius: 5px;
+      margin: 16px 0 22px;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 15px 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid #aab7c8;
+      border-radius: 9px;
+      padding: 12px;
+      font-size: 1rem;
+    }
+
+    input:focus {
+      outline: 3px solid #bdd6f6;
+      border-color: #2c65a3;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .result {
+      background: #f1f5fa;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .result small {
+      display: block;
+      color: #526179;
+      margin-bottom: 8px;
+    }
+
+    .result strong { font-size: 1.65rem; }
+
+    .pass { color: #17633d; }
+    .np { color: #9b2c2c; }
+
+    .foot {
+      color: #596779;
+      font-size: .88rem;
+      margin-top: 18px;
+    }
+
+    button {
+      margin-top: 18px;
+      background: white;
+      border: 1px solid #8e9db0;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover { background: #f1f5fa; }
+
+    .error {
+      color: #a02424;
+      min-height: 1.5em;
+    }
+
+    @media(max-width:540px) {
+      body { padding: 10px; }
+      .wrap { padding: 17px; }
+      .results { grid-template-columns: 1fr; }
+      .grid { gap: 12px; }
+      h1 { font-size: 1.35rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+
+    <h1>MATH 1040 Grade Calculator</h1>
+
+    <p class="intro">
+      Enter your grades from Canvas and estimated scores for
+      upcoming assessments to explore possible outcomes and
+      plan for Exam 3 and the Final Exam.
+    </p>
+
+    <div class="notice">
+      <strong>Important:</strong>
+      Enter your original Test 1, Test 2, and Test 3 scores.
+      <strong>Do not replace the lowest test score yourself.</strong>
+      The calculator automatically applies the final exam
+      replacement rule when beneficial.
+
+      <p>
+        For exams you have not yet taken,
+        <strong>enter estimated scores</strong>
+        to explore different scenarios and determine what
+        you may need to earn to pass the course.
+      </p>
+    </div>
+
+    <div class="grid" id="fields"></div>
+
+    <div class="error" id="error"
+         role="alert" aria-live="polite"></div>
+
+    <div class="results" aria-live="polite">
+
+      <div class="result">
+        <small>Weighted Exam Average or Final Exam Score</small>
+        <strong id="exam">—</strong>
+      </div>
+
+      <div class="result">
+        <small>Course Average</small>
+        <strong id="course">—</strong>
+      </div>
+
+      <div class="result">
+        <small>Letter Grade</small>
+        <strong id="grade">—</strong>
+      </div>
+
+    </div>
+
+    <button id="reset" type="button">
+      Clear all grades
+    </button>
+
+    <p class="foot">
+      This calculator is a guide only, not a guarantee of
+      your final course grade. No scores are submitted or stored.
+      The grade shown here does not change your grades in Canvas.
+    </p>
+
+  </main>
+
+  <script>
+    const fields = [
+      ['hw', 'Written HW'],
+      ['edf', 'Edfinity'],
+      ['quiz', 'Quizzes'],
+      ['la', 'Learning Activities'],
+      ['t1', 'Test 1'],
+      ['t2', 'Test 2'],
+      ['t3', 'Test 3'],
+      ['final', 'Final Exam']
+    ];
+
+    const holder = document.getElementById('fields');
+
+    for (const [id, name] of fields) {
+      const el = document.createElement('div');
+      const label = document.createElement('label');
+
+      label.htmlFor = id;
+      label.textContent = name + ' (%)';
+
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.id = id;
+      input.min = '0';
+      input.max = '100';
+      input.step = 'any';
+      input.placeholder = '0–100';
+      input.inputMode = 'decimal';
+      input.addEventListener('input', calculate);
+
+      el.append(label, input);
+      holder.appendChild(el);
+    }
+
+    const trunc2 = x =>
+      Math.trunc((x + Number.EPSILON) * 100) / 100;
+
+    function calculate() {
+      const v = {};
+      let invalid = false;
+
+      for (const [id] of fields) {
+        const raw = document.getElementById(id).value;
+        const n = raw === '' ? 0 : Number(raw);
+
+        if (!Number.isFinite(n) || n < 0 || n > 100) {
+          invalid = true;
+        }
+
+        v[id] = n;
+      }
+
+      document.getElementById('error').textContent =
+        invalid
+          ? 'Please enter a score from 0 to 100 for each field.'
+          : '';
+
+      if (invalid) {
+        for (const id of ['exam', 'course', 'grade']) {
+          document.getElementById(id).textContent = '—';
+        }
+        return;
+      }
+
+      // Original Excel calculator formulas.
+
+      const examSum =
+        v.t1 + v.t2 + v.t3 + v.final
+        - Math.min(v.t1, v.t2, v.t3, v.final);
+
+      const exam = trunc2(
+        Math.max(
+          (15 * examSum + 20 * v.final) / 65,
+          v.final
+        )
+      );
+
+      const course = exam >= 65
+        ? trunc2(
+            (
+              10 * Math.min(v.hw, 100)
+              + 9 * v.edf
+              + 10 * Math.min(v.quiz, 100)
+              + 6 * Math.min(v.la, 100)
+              + 15 * examSum
+              + 20 * v.final
+            ) / 100
+          )
+        : null;
+
+      const grade =
+        course === null
+          ? 'NP'
+          : course >= 70
+            ? 'P'
+            : 'NP';
+
+      document.getElementById('exam').textContent =
+        exam.toFixed(2) + '%';
+
+      document.getElementById('course').textContent =
+        course === null
+          ? 'NP'
+          : course.toFixed(2) + '%';
+
+      const gradeEl = document.getElementById('grade');
+      gradeEl.textContent = grade;
+      gradeEl.className = grade === 'P' ? 'pass' : 'np';
+    }
+
+    document.getElementById('reset')
+      .addEventListener('click', () => {
+        for (const [id] of fields) {
+          document.getElementById(id).value = '';
+        }
+        calculate();
+      });
+
+    calculate();
+  </script>
+</body>
+</html>
